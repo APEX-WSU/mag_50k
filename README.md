@@ -10,6 +10,7 @@ In total:
 
 ## License
 Contains information from [Microsoft Academic Graph](https://www.microsoft.com/en-us/research/project/microsoft-academic-graph/) which is made available under the ODC Attribution License:
-* *[License text](https://opendatacommons.org/licenses/by/1.0/) (also LICENSE.md)
+
+* [License text](https://opendatacommons.org/licenses/by/1.0/) (also LICENSE.md) 
 * [Plain language summary](https://opendatacommons.org/licenses/by/summary/index.html)
 
