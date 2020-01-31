@@ -1,0 +1,188 @@
+// Get all fields of study containing a keyword, and all of their children and parents
+USE DATABASE AcademicGraph;
+DECLARE @outputDir string = "/output/top_50k/mathematics";
+DECLARE @fosId long = 33923547;
+
+DECLARE @papersFile string = @outputDir + "/papers.tsv";
+DECLARE @authorsFile string = @outputDir + "/authors.tsv";
+DECLARE @paperAuthorAffiliationsFile string = @outputDir + "/paper_author_affiliations.tsv";
+DECLARE @affiliationsFile string = @outputDir + "/affiliations.tsv";
+DECLARE @allAffiliationsFile string = @outputDir + "/all_affiliations.tsv";
+DECLARE @fieldsOfStudyFile string = @outputDir + "/fields_of_study.tsv";
+DECLARE @relatedFieldsOfStudyFile string = @outputDir + "/related_field_of_study.tsv";
+DECLARE @fieldOfStudyChildrenFile string = @outputDir + "/field_of_study_children.tsv";
+DECLARE @paperFieldsOfStudyFile string = @outputDir + "/paper_fields_of_study.tsv";
+DECLARE @paperAbstractsInvertedIndexFile string = @outputDir + "/paper_abstract_inverted_index.tsv";
+DECLARE @journalsFile string = @outputDir + "/journals.tsv";
+DECLARE @conferenceInstancesFile string = @outputDir + "/conference_instances.tsv";
+DECLARE @conferenceSeriesFile string = @outputDir + "/conference_series.tsv";
+DECLARE @paperExtendedAttributesFile string = @outputDir + "/paper_extended_attributes.tsv";
+DECLARE @paperReferencesFile string = @outputDir + "/paper_references.tsv";
+DECLARE @paperCitationContextsFile string = @outputDir + "/paper_citation_contexts.tsv";
+DECLARE @paperResourcesFile string = @outputDir + "/paper_resources.tsv";
+DECLARE @paperUrlsFile string = @outputDir + "/paper_urls.tsv";
+DECLARE @entityRelatedEntitiesFile string = @outputDir + "/entity_related_entities.tsv";
+
+// Convert fields that are nullable in other tables to nullable in parent table
+@Journals =
+    SELECT (long?)JournalId AS JournalId, Rank, NormalizedName, DisplayName, Issn, Publisher, Webpage, PaperCount, CitationCount, CreatedDate
+    FROM Journals;
+
+@ConferenceInstances =
+    SELECT (long?)ConferenceInstanceId AS ConferenceInstanceId, NormalizedName, DisplayName, ConferenceSeriesId, Location, OfficialUrl, StartDate, EndDate, AbstractRegistrationDate,
+     SubmissionDeadlineDate, NotificationDueDate, FinalVersionDueDate, PaperCount, CitationCount, Latitude, Longitude, CreatedDate
+    FROM ConferenceInstances;
+
+@ConferenceSeries =
+    SELECT (long?)ConferenceSeriesId AS ConferenceSeriesId, Rank, NormalizedName, DisplayName, PaperCount, CitationCount, CreatedDate
+    FROM ConferenceSeries;
+
+@Affiliations =
+    SELECT (long?)AffiliationId AS AffiliationId, Rank, NormalizedName, DisplayName, GridId, OfficialPage, WikiPage, PaperCount, CitationCount, Latitude, Longitude, CreatedDate
+    FROM Affiliations;
+
+
+//Select top 50k papers for this FoS
+@papers = 
+	SELECT P.*
+	FROM Papers AS P
+	INNER JOIN PaperFieldsOfStudy AS Pf
+	ON P.PaperId == Pf.PaperId
+	WHERE Pf.FieldOfStudyId == @fosId
+	AND P.Year >= 1994
+	AND P.DocType IN ("Conference", "Journal");
+
+@papers =
+	SELECT *
+	FROM @papers
+	ORDER BY CitationCount DESC FETCH 50000 ROWS;
+
+
+@paperFieldsOfStudy =
+	SELECT Pf.*
+	FROM PaperFieldsOfStudy AS Pf
+	INNER JOIN @papers AS P
+	ON P.PaperId == Pf.PaperId;
+
+@fieldsOfStudy =
+	SELECT F.*
+	FROM FieldsOfStudy AS F
+	INNER JOIN @paperFieldsOfStudy AS Pf
+	ON Pf.FieldOfStudyId == F.FieldOfStudyId;
+
+@journals =
+    SELECT DISTINCT J.*
+	FROM @Journals AS J
+    INNER JOIN @papers AS P
+        ON J.JournalId == P.JournalId;
+
+@conferenceSeries =
+    SELECT DISTINCT C.*
+    FROM @papers AS P
+    INNER JOIN @ConferenceSeries AS C
+        ON C.ConferenceSeriesId == P.ConferenceSeriesId;
+
+@conferenceInstances =
+    SELECT DISTINCT C.*
+    FROM @papers AS P
+    INNER JOIN @ConferenceInstances AS C
+        ON C.ConferenceInstanceId == P.ConferenceInstanceId;
+
+@paperReferences =
+    SELECT DISTINCT Pr.*
+    FROM @papers AS P1
+    INNER JOIN PaperReferences AS Pr
+        ON Pr.PaperId == P1.PaperId
+    INNER JOIN @papers AS P2
+        ON P2.PaperId == Pr.PaperReferenceId;
+
+@paperCitationContexts =
+    SELECT DISTINCT Pc.*
+    FROM @papers AS P1
+    INNER JOIN PaperCitationContexts AS Pc
+        ON Pc.PaperId == P1.PaperId
+    INNER JOIN @papers AS P2
+        ON P2.PaperId == Pc.PaperReferenceId;
+
+@paperResources =
+	SELECT DISTINCT Pr.*
+	FROM @papers AS P
+	INNER JOIN PaperResources AS Pr
+		ON Pr.PaperId == P.PaperId;
+
+@paperExtendedAttributes =
+    SELECT DISTINCT Pe.*
+    FROM @papers AS P
+    INNER JOIN PaperExtendedAttributes AS Pe
+        ON Pe.PaperId == P.PaperId;
+
+@paperUrls =
+    SELECT DISTINCT Pu.*
+    FROM @papers AS P
+    INNER JOIN PaperUrls AS Pu
+        ON Pu.PaperId == P.PaperId;
+
+@paperAbstractsInvertedIndex =
+    SELECT DISTINCT Pa.*
+    FROM PaperAbstractsInvertedIndex AS Pa
+    INNER JOIN @papers AS P
+        ON P.PaperId == Pa.PaperId;
+
+@paperAuthorAffiliations =
+    SELECT Aa.*
+    FROM @papers AS P
+    INNER JOIN PaperAuthorAffiliations AS Aa
+        ON P.PaperId == Aa.PaperId;
+
+@affiliations =
+    SELECT DISTINCT Af.*
+    FROM @paperAuthorAffiliations AS Aa
+    INNER JOIN @Affiliations AS Af
+        ON Af.AffiliationId == Aa.AffiliationId;
+
+@relatedFieldsOfStudy =
+    SELECT DISTINCT Rfs.*
+    FROM @fieldsOfStudy AS F1
+    INNER JOIN RelatedFieldOfStudy AS Rfs
+        ON Rfs.FieldOfStudyId1 == F1.FieldOfStudyId
+    INNER JOIN @fieldsOfStudy AS F2
+        ON F2.FieldOfStudyId == Rfs.FieldOfStudyId2;
+
+@fieldOfStudyChildren =
+    SELECT DISTINCT Fsc.*
+    FROM @fieldsOfStudy AS F1
+    INNER JOIN FieldOfStudyChildren AS Fsc
+        ON F1.FieldOfStudyId == Fsc.FieldOfStudyId
+    INNER JOIN @fieldsOfStudy AS F2
+        ON F2.FieldOfStudyId == Fsc.ChildFieldOfStudyId;
+
+@authorAffiliations =
+    SELECT Aa.*
+    FROM @papers AS P
+    INNER JOIN PaperAuthorAffiliations AS Aa
+        ON P.PaperId == Aa.PaperId;
+
+@authors =
+    SELECT DISTINCT A.*
+    FROM @authorAffiliations AS Aa 
+    INNER JOIN Authors AS A
+        ON Aa.AuthorId == A.AuthorId;
+
+
+OUTPUT @papers TO @papersFile USING Outputters.Tsv(quoting:true, outputHeader:true);   
+OUTPUT @authors TO @authorsFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @paperAuthorAffiliations TO @paperAuthorAffiliationsFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @paperAbstractsInvertedIndex TO @paperAbstractsInvertedIndexFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @fieldsOfStudy TO @fieldsOfStudyFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @relatedFieldsOfStudy TO @relatedFieldsOfStudyFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @fieldOfStudyChildren TO @fieldOfStudyChildrenFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @paperFieldsOfStudy TO @paperFieldsOfStudyFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @affiliations TO @affiliationsFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @journals TO @journalsFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @conferenceInstances TO @conferenceInstancesFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @conferenceSeries TO @conferenceSeriesFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @paperExtendedAttributes TO @paperExtendedAttributesFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @paperReferences TO @paperReferencesFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @paperCitationContexts TO @paperCitationContextsFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @paperResources TO @paperResourcesFile USING Outputters.Tsv(quoting:true, outputHeader:true);
+OUTPUT @paperUrls TO @paperUrlsFile USING Outputters.Tsv(quoting:true, outputHeader:true);
