@@ -2,7 +2,7 @@
 These datasets include the top 50,000 most-cited journal/conference papers published from Jan 1994 - Jan 2020 for each of the 19 level 0 fields of study.
 
 In total:
-* 950k papers
+* 950k papers (with 850k+ available abstracts)
 * 1.6M authors
 * 14k affiliations
 * 22.5k journals
