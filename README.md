@@ -9,7 +9,7 @@ In total:
 * 2k conference series
 
 ## License
-These datasets are "Derivative Databases" under the terms of MAG's license, the Open Data Commons Attribution License v1.0:
-* *[License text](https://opendatacommons.org/licenses/by/1.0/)
+Contains information from [Microsoft Academic Graph](https://www.microsoft.com/en-us/research/project/microsoft-academic-graph/) which is made available under the ODC Attribution License:
+* *[License text](https://opendatacommons.org/licenses/by/1.0/) (also LICENSE.md)
 * [Plain language summary](https://opendatacommons.org/licenses/by/summary/index.html)
 
