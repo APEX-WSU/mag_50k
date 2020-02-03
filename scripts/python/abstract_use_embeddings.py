@@ -11,10 +11,11 @@ import tensorflow as tf
 
 
 def load_abstracts(filename):
-    with open('/home/dfoose/paper_abstracts.json') as file:
+    with open(filename) as file:
         data = json.load(file)
         paper_ids = [key for key in data.keys()]
         abstracts = [data[key] for key in paper_ids]
+        paper_ids = [int(paper_id) for paper_id in paper_ids]
         del data
     return paper_ids, abstracts
 
@@ -43,10 +44,10 @@ def embed_abstracts(abstracts):
 def main():
     infilename = sys.argv[1]
     outfilename = sys.argv[2]
-    print('Loading abstracts')
+    print(f'Loading abstracts from {infilename}')
     paper_ids, abstracts = load_abstracts(infilename)
     embeddings = embed_abstracts(abstracts)    
-    print('Exporting to file')
+    print(f'Exporting to {outfilename}')
     pd.DataFrame(embeddings, index=paper_ids).to_pickle('paper_abstracts_use_embeddings.pkl')
 
 
