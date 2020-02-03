@@ -66,7 +66,7 @@ def get_citation_graph(input_dir, by='author'):
     if by == 'paper':
         return get_paper_citation_graph(input_dir)
     author_citations, node_labels = get_author_citations(input_dir, by)
-    g = nx.DiGraph()
+    g = nx.MultiDiGraph()
     g.add_nodes_from([(key, value) for key, value in node_labels.to_dict('index').items()])
     edges = [get_edge_tuple(row, by) for _, row in author_citations.iterrows()]
     g.add_edges_from(edges)
