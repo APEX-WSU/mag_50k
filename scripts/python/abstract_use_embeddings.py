@@ -48,7 +48,7 @@ def main():
     paper_ids, abstracts = load_abstracts(infilename)
     embeddings = embed_abstracts(abstracts)    
     print(f'Exporting to {outfilename}')
-    pd.DataFrame(embeddings, index=paper_ids).to_pickle('paper_abstracts_use_embeddings.pkl')
+    pd.DataFrame(embeddings, index=paper_ids).to_pickle(outfilename)
 
 
 if __name__ == '__main__':
