@@ -5,7 +5,7 @@ import json
 import tensorflow_hub as hub
 import pandas as pd
 import sys
-import progressbar
+from tqdm import tqdm
 from nltk.tokenize import sent_tokenize
 import tensorflow as tf
 
@@ -29,15 +29,13 @@ def embed_abstracts(abstracts):
     print('Loading USE')
     embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
     
-    def embed_abstract(abstract, i, progress):
+    def embed_abstract(abstract):
         sentences = sent_tokenize(abstract)
         sentence_embeddings = embed(sentences).numpy()
-        progress.update(i)
         return sentence_embeddings.mean(axis=0).to_list()
     
     print('Computing embeddings')
-    with progressbar.ProgressBar(max_value=len(abstracts)) as bar:
-        embeddings = [embed_abstract(abstract, i, bar) for i, abstract in enumerate(abstracts)]
+    embeddings = [embed_abstract(abstract) for abstract in tqdm(abstracts)]
     return embeddings
 
 

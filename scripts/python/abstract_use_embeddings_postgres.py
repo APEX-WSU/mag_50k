@@ -7,7 +7,7 @@ import json
 import tensorflow_hub as hub
 import pandas as pd
 import sys
-import progressbar
+from tqdm import tqdm
 from nltk.tokenize import sent_tokenize
 import tensorflow as tf
 
@@ -31,10 +31,9 @@ def embed_abstracts(abstracts, paper_ids, prefix):
     print('Loading USE')
     embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
 
-    def embed_abstract(abstract, i, paper_id, progress):
+    def embed_abstract(abstract, paper_id):
         sentences = sent_tokenize(abstract)
         sentence_embeddings = embed(sentences).numpy()
-        progress.update(i)
         return str(paper_id) + '\t' + '{' + ','.join([str(v) for v in sentence_embeddings.mean(axis=0)]) + '}\n'
 
     def write_embeddings(embeddings, filename):
@@ -45,13 +44,12 @@ def embed_abstracts(abstracts, paper_ids, prefix):
     print('Computing embeddings')
     embeddings = []
     suffix = 0
-    with progressbar.ProgressBar(max_value=len(abstracts)) as bar:
-        for i, (paper_id, abstract) in enumerate(zip(paper_ids, abstracts)):
-            if len(embeddings) >= 250000:
-                write_embeddings(embeddings, f'{prefix}_{suffix}.tsv')
-                suffix += 1
-                embeddings = []
-            embeddings.append(embed_abstract(abstract, i, paper_id, bar))
+    for (paper_id, abstract) in tqdm(zip(paper_ids, abstracts)):
+        if len(embeddings) >= 250000:
+            write_embeddings(embeddings, f'{prefix}_{suffix}.tsv')
+            suffix += 1
+            embeddings = []
+        embeddings.append(embed_abstract(abstract, paper_id))
     suffix += 1
     write_embeddings(embeddings, f'{prefix}_{suffix}.tsv')
 
